@@ -3,7 +3,7 @@ defmodule Todo.Database do
 
   @db_folder "./persisted_data"
 
-  def start_link(nil) do
+  def start_link(_) do
     IO.puts "Starting the todo Database"
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
