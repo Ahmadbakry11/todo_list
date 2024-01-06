@@ -1,11 +1,6 @@
-defmodule Todo.ProcessRegisty do
+defmodule Todo.ProcessRegistry do
   def start_link() do
-    IO.puts("Starting the Process Registry")
     Registry.start_link(name: __MODULE__, keys: :unique)
-  end
-
-  def via_tuple(key) do
-    {:via, Registry, {__MODULE__, key}}
   end
 
   def child_spec(_) do
@@ -16,8 +11,7 @@ defmodule Todo.ProcessRegisty do
     )
   end
 
-  def lookup(key) do
-    [{pid, _}] = Registry.lookup(__MODULE__, key)
-    pid
+  def via_tuple(key) do
+    {:via, Registry, {__MODULE__, key}}
   end
 end

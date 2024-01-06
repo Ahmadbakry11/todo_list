@@ -1,74 +1,111 @@
 defmodule Todo.Server do
   use GenServer, restart: :temporary
 
-  def start_link(list_name) do
-    IO.puts "Starting the todo Server for #{list_name}"
-    GenServer.start_link(__MODULE__, list_name, name: via_tuple(list_name))
+  alias Todo.List
+  alias Todo.Entry
+  alias Todo.Database
+  alias Todo.ProcessRegistry
+
+  def start_link(todo_list_name) do
+    IO.puts("Starting Todo Server for #{todo_list_name}.....")
+    GenServer.start_link(__MODULE__, todo_list_name, name: via_tuple(todo_list_name))
   end
 
-  def add_entry(todo_server, entry) do
-    GenServer.cast(todo_server, {:add_entry, entry})
-  end
-
-  def update_entry(todo_server, new_entry) do
-    GenServer.cast(todo_server, {:update_entry, new_entry})
-  end
-
-  def delete_entry(todo_server, entry_id) do
-    GenServer.cast(todo_server, {:delete_entry, entry_id})
-  end
-
-  def entries(todo_server, date) do
-    GenServer.call(todo_server, {:entries, date})
-  end
-
-  def entries(todo_server) do
-    GenServer.call(todo_server, {:entries})
-  end
-
-  @impl GenServer
-  def init(list_name) do
-    send(self(), {:real_init, list_name})
+  def init(name) do
+    send(self(), {:init, name})
     {:ok, nil}
   end
 
-  @impl GenServer
-  def handle_info({:real_init, list_name}, _) do
-    {:noreply, {list_name, Todo.Database.get(list_name) || Todo.List.new()}}
+  def add_entry(todo_pid, entry) do
+    GenServer.cast(todo_pid, {:post, entry})
   end
 
-  @impl GenServer
-  def handle_cast({:add_entry, entry}, {list_name, todo_list}) do
-    new_list = Todo.List.add_entry(todo_list, entry)
-    Todo.Database.store(list_name, new_list)
-    {:noreply, {list_name, new_list}}
+  def add_entries(todo_pid, entries) do
+    GenServer.cast(todo_pid, {:post, entries})
   end
 
-  @impl GenServer
-  def handle_cast({:update_entry, new_entry}, {list_name, todo_list}) do
-    new_list = Todo.List.update_entry(todo_list, new_entry)
-    Todo.Database.store(list_name, new_list)
-    {:noreply, {list_name, new_list}}
+  def update_entry(todo_pid, entry_id, updater) do
+    GenServer.cast(todo_pid, {:update, entry_id, updater})
   end
 
-  @impl GenServer
-  def handle_cast({:delete_entry, entry_id}, {list_name, todo_list}) do
-    new_list = Todo.List.delete_entry(todo_list, entry_id)
-    Todo.Database.store(list_name, new_list)
-    {:noreply, {list_name, new_list}}
+  def delete_entry(todo_pid, entry_id) do
+    GenServer.cast(todo_pid, {:delete, entry_id})
   end
 
-  @impl GenServer
-  def handle_call({:entries, date}, _, {list_name, todo_list}) do
-    {:reply, Todo.List.entries(todo_list, date), {list_name, todo_list}}
+  def entries(todo_pid) do
+    GenServer.call(todo_pid, {:get})
   end
 
-  @impl GenServer
-  def handle_call({:entries}, _, {list_name, todo_list}) do
-    {:reply, Todo.List.entries(todo_list), {list_name, todo_list}}
+  def entries(todo_pid, date) do
+    GenServer.call(todo_pid, {:get, date})
   end
 
-  defp via_tuple(list_name) do
-    Todo.ProcessRegisty.via_tuple({__MODULE__, list_name})
+  def handle_info({:init, name}, _) do
+    todo_list = Database.get(name) || List.new(name)
+    {:noreply, todo_list}
+  end
+
+  def handle_cast({:post, %Entry{} = entry}, todo_list) do
+    new_todo_list = List.add_entry(todo_list, entry)
+    Database.store(new_todo_list.name, new_todo_list)
+
+    {:noreply, new_todo_list}
+  end
+
+  def handle_cast({:post, [_ | _] = entries}, todo_list) do
+    new_todo_list = List.add_entries(todo_list, entries)
+    Database.store(new_todo_list.name, new_todo_list)
+
+    {:noreply,new_todo_list}
+  end
+
+  def handle_cast({:update, entry_id, updater}, todo_list) do
+    new_todo_list = List.update_entry(todo_list, entry_id, updater)
+    Database.store(new_todo_list.name, new_todo_list)
+
+    {:noreply, new_todo_list}
+  end
+
+  def handle_cast({:delete, entry_id}, todo_list) do
+    new_todo_list = List.delete_entry(todo_list, entry_id)
+    Database.store(new_todo_list.name, new_todo_list)
+
+    {:noreply, new_todo_list}
+  end
+
+  def handle_call({:get}, _, todo_list) do
+    {:reply, List.entries(todo_list), todo_list}
+  end
+
+  def handle_call({:get, date}, _, todo_list) do
+    {:reply, List.entries(todo_list, date), todo_list}
+  end
+
+  defp via_tuple(name) do
+    ProcessRegistry.via_tuple({__MODULE__, name})
   end
 end
+
+# e1 = Todo.Entry.new(~D[2020-11-12], "Dentist")
+# e2 = Todo.Entry.new(~D[2020-11-12], "shopping")
+# e3 = Todo.Entry.new(~D[2020-11-15], "Gym")
+
+# entries = [
+#   %{date: ~D[2020-11-13], title: "cooking food"},
+#   %{date: ~D[2020-11-14], title: "biking"},
+#   %{date: ~D[2020-11-17], title: "airport"}
+# ]
+
+# updater = fn x -> %Todo.Entry{id: x.id, date: x.date, title: "reading"} end
+
+# Todo.Server.start()
+# Todo.Server.add_entry(e1)
+# Todo.Server.add_entry(e2)
+# Todo.Server.add_entry(e3)
+
+
+# Todo.Server.add_entries(entries)
+
+# Todo.Server.update_entry(1, updater)
+
+# Todo.Server.delete_entry(4)

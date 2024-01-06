@@ -1,57 +1,57 @@
 defmodule Todo.List do
-  defstruct [auto_id: 1, entries: %{}]
+  alias Todo.List
+  alias Todo.Entry
 
-  def new(), do: %Todo.List{}
+  defstruct auto_id: 1, name: nil, entries: %{}
 
-  def new(entries) do
-    Enum.reduce(
-      entries,
-      %Todo.List{},
-      fn entry, todo_list -> Todo.List.add_entry(todo_list, entry) end
-    )
+  def new(name) when is_binary(name) do
+    %List{name: name, auto_id: 1}
   end
 
-  def add_entry(todo_list, entry) do
-    entry = Map.put(entry, :id, todo_list.auto_id)
+  def add_entry(todo_list, %Entry{} = entry) do
+    new_entry = Map.put(entry, :id, todo_list.auto_id)
+    new_entries = Map.put(todo_list.entries, todo_list.auto_id, new_entry)
 
-    new_entries = Map.put(
-      todo_list.entries,
-      todo_list.auto_id,
-      entry
-    )
+    %List{todo_list | auto_id: todo_list.auto_id + 1, entries: new_entries}
+  end
 
-    %Todo.List{todo_list |  auto_id: todo_list.auto_id + 1, entries: new_entries}
+  def add_entries(todo_list, entries) do
+    entries
+    |> Enum.map(&Entry.new(&1))
+    |> Enum.reduce(todo_list, &add_entry(&2, &1))
   end
 
   def entries(todo_list) do
     todo_list.entries
-    |> Enum.to_list
   end
 
   def entries(todo_list, date) do
     todo_list.entries
-    |> Stream.filter(fn {_, entry} -> entry.date == date end)
-    |> Enum.map(fn {_, todo} -> todo end)
+    |> Stream.map(fn {_, v} -> v end)
+    |> Enum.filter(&(&1.date == date))
   end
 
-  def update_entry(todo_list, id, updater_func) do
-    case Map.fetch(todo_list.entries, id) do
+  def update_entry(todo_list, entry_id, updater) do
+    case Map.fetch(todo_list.entries, entry_id) do
       :error -> todo_list
-
       {:ok, old_entry} ->
         old_entry_id = old_entry.id
-        new_entry = %{id: ^old_entry_id} = updater_func.(old_entry)
-
-        new_entries = Map.put(todo_list.entries, new_entry.id, new_entry)
-        %Todo.List{todo_list | entries: new_entries}
+        new_entry = %Entry{id: ^old_entry_id} = updater.(old_entry)
+        new_entries = Map.put(todo_list.entries, entry_id, new_entry)
+        %List{todo_list | entries: new_entries}
     end
   end
 
-  def update_entry(todo_list, %{} = new_entry) do
+  def update_entry(todo_list, %Entry{} = new_entry) do
     update_entry(todo_list, new_entry.id, fn _ -> new_entry end)
   end
 
   def delete_entry(todo_list, entry_id) do
-    %Todo.List{todo_list | entries: Map.delete(todo_list.entries, entry_id)}
+    case Map.fetch(todo_list.entries, entry_id) do
+      :error -> todo_list
+      {:ok, _} ->
+        new_entries = Map.delete(todo_list.entries, entry_id)
+        %List{todo_list | entries: new_entries}
+    end
   end
 end
