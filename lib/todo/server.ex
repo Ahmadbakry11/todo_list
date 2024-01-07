@@ -6,6 +6,8 @@ defmodule Todo.Server do
   alias Todo.Database
   alias Todo.ProcessRegistry
 
+  @expiry_idle_timeout :timer.seconds(10)
+
   def start_link(todo_list_name) do
     IO.puts("Starting Todo Server for #{todo_list_name}.....")
     GenServer.start_link(__MODULE__, todo_list_name, name: via_tuple(todo_list_name))
@@ -13,7 +15,7 @@ defmodule Todo.Server do
 
   def init(name) do
     send(self(), {:init, name})
-    {:ok, nil}
+    {:ok, nil, @expiry_idle_timeout}
   end
 
   def add_entry(todo_pid, entry) do
@@ -42,43 +44,48 @@ defmodule Todo.Server do
 
   def handle_info({:init, name}, _) do
     todo_list = Database.get(name) || List.new(name)
-    {:noreply, todo_list}
+    {:noreply, todo_list, @expiry_idle_timeout}
+  end
+
+  def handle_info(:timeout, todo_list) do
+    IO.puts("Stopping the todo server for #{todo_list.name}")
+    {:stop, :normal, todo_list}
   end
 
   def handle_cast({:post, %Entry{} = entry}, todo_list) do
     new_todo_list = List.add_entry(todo_list, entry)
     Database.store(new_todo_list.name, new_todo_list)
 
-    {:noreply, new_todo_list}
+    {:noreply, new_todo_list, @expiry_idle_timeout}
   end
 
   def handle_cast({:post, [_ | _] = entries}, todo_list) do
     new_todo_list = List.add_entries(todo_list, entries)
     Database.store(new_todo_list.name, new_todo_list)
 
-    {:noreply,new_todo_list}
+    {:noreply,new_todo_list, @expiry_idle_timeout}
   end
 
   def handle_cast({:update, entry_id, updater}, todo_list) do
     new_todo_list = List.update_entry(todo_list, entry_id, updater)
     Database.store(new_todo_list.name, new_todo_list)
 
-    {:noreply, new_todo_list}
+    {:noreply, new_todo_list, @expiry_idle_timeout}
   end
 
   def handle_cast({:delete, entry_id}, todo_list) do
     new_todo_list = List.delete_entry(todo_list, entry_id)
     Database.store(new_todo_list.name, new_todo_list)
 
-    {:noreply, new_todo_list}
+    {:noreply, new_todo_list, @expiry_idle_timeout}
   end
 
   def handle_call({:get}, _, todo_list) do
-    {:reply, List.entries(todo_list), todo_list}
+    {:reply, List.entries(todo_list), todo_list, @expiry_idle_timeout}
   end
 
   def handle_call({:get, date}, _, todo_list) do
-    {:reply, List.entries(todo_list, date), todo_list}
+    {:reply, List.entries(todo_list, date), todo_list, @expiry_idle_timeout}
   end
 
   defp via_tuple(name) do
