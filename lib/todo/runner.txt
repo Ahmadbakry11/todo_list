@@ -11,17 +11,17 @@ alias Todo.Cache
 alias Todo.Server
 alias Todo.List
 
-Cache.start()
+Cache.start_link()
 
-list4 = Cache.server_process("list4")
-Server.add_entry(list1, e1)
-Server.add_entry(list1, e2)
-Server.entries(list1)
+list4 = Todo.Cache.server_process("list4")
+Todo.Server.add_entry(list4, e1)
+Todo.Server.add_entry(list4, e2)
+Todo.Server.entries(list4)
 
 
 list2 = Cache.server_process("list2")
-Server.add_entry(list2, e3)
-Server.add_entry(list2, e4)
+Server.add_entry(list2, e1)
+Server.add_entry(list2, e2)
 Server.entries(list2)
 
 list3 = Cache.server_process("list3")

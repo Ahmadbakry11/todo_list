@@ -5,7 +5,8 @@ defmodule Todo.System do
         Todo.ProcessRegistry,
         Todo.Database,
         Todo.Cache,
-        Todo.MetricsScheduler
+        Todo.Web
+        # Todo.MetricsScheduler
       ],
       strategy: :one_for_one
     )

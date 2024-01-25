@@ -2,12 +2,7 @@ defmodule Todo.Databaseworker do
   use GenServer
 
   def start_link(db_folder) do
-    IO.puts("Starting Database Workers.....")
     GenServer.start_link(__MODULE__, db_folder)
-  end
-
-  def init(db_folder) do
-    {:ok, db_folder}
   end
 
   def store(worker_pid, key, data) do
@@ -18,6 +13,12 @@ defmodule Todo.Databaseworker do
     GenServer.call(worker_pid, {:get, key})
   end
 
+  @impl GenServer
+  def init(db_folder) do
+    {:ok, db_folder}
+  end
+
+  @impl GenServer
   def handle_cast({:store, key, data}, state) do
     state
     |> file_name(key)
@@ -26,8 +27,9 @@ defmodule Todo.Databaseworker do
     {:noreply, state}
   end
 
+  @impl GenServer
   def handle_call({:get, key}, _, state) do
-    todo_list  = case File.read(file_name(key, state)) do
+    todo_list  = case File.read(file_name(state, key)) do
       {:error, :enoent} -> nil
       {:ok, content} -> :erlang.binary_to_term(content)
     end

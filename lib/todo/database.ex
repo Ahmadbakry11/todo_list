@@ -4,7 +4,6 @@ defmodule Todo.Database do
 
   @db_folder "todo_database"
   @db_workers 3
-  @over_flow_workers 2
 
   def child_spec(_) do
     File.mkdir_p!(@db_folder)
@@ -15,24 +14,28 @@ defmodule Todo.Database do
       [
         name: {:local, __MODULE__},
         worker_module: Databaseworker,
-        size: @db_workers,
-        max_overflow: @over_flow_workers
+        size: @db_workers
       ],
 
       [@db_folder]
     )
   end
 
-
   def store(key, data) do
-    :poolboy.transaction(__MODULE__,
-      fn worker_pid -> Databaseworker.store(worker_pid, key, data) end
+    :poolboy.transaction(
+      __MODULE__,
+      fn worker_pid ->
+        Databaseworker.store(worker_pid, key, data)
+      end
     )
   end
 
   def get(key) do
-    :poolboy.transaction(__MODULE__,
-     fn worker_pid -> Databaseworker.get(worker_pid, key) end
+    :poolboy.transaction(
+      __MODULE__,
+      fn worker_pid ->
+        Databaseworker.get(worker_pid, key)
+      end
     )
   end
 end

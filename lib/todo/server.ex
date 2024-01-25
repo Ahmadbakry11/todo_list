@@ -6,7 +6,7 @@ defmodule Todo.Server do
   alias Todo.Database
   alias Todo.ProcessRegistry
 
-  @expiry_idle_timeout :timer.seconds(1000000)
+  @expiry_idle_timeout :timer.seconds(100000)
 
   def start_link(todo_list_name) do
     IO.puts("Starting Todo Server for #{todo_list_name}.....")
@@ -14,8 +14,10 @@ defmodule Todo.Server do
   end
 
   def init(name) do
-    send(self(), {:init, name})
-    {:ok, nil, @expiry_idle_timeout}
+    todo_list = Database.get(name) || List.new(name)
+    {:ok, todo_list}
+    # send(self(), {:init, name})
+    # {:ok, nil, @expiry_idle_timeout}
   end
 
   def add_entry(todo_pid, entry) do

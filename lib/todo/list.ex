@@ -54,4 +54,9 @@ defmodule Todo.List do
         %List{todo_list | entries: new_entries}
     end
   end
+
+  def todos_list(todos) do
+    todos
+    |> Enum.reduce([], fn {_, x}, acc  -> [%{title: x.title, date: x.date} | acc] end)
+  end
 end
