@@ -14,7 +14,7 @@ defmodule Todo.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :plug_cowboy],
       mod: {Todo.Application, []}
     ]
   end
@@ -22,7 +22,9 @@ defmodule Todo.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:poolboy, "~> 1.5"}
+      {:poolboy, "~> 1.5"},
+      {:plug_cowboy, "~> 2.6"},
+      {:jason, "~> 1.4"}
     ]
   end
 end
