@@ -11,7 +11,7 @@ defmodule Todo.Web do
     IO.puts "Starting the web server....."
     Plug.Cowboy.child_spec(
       scheme: :http,
-      options: [port: 4000],
+      options: [port: Application.get_env(:todo, :port)],
       plug: __MODULE__
     )
   end
