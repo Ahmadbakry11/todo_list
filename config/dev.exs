@@ -1,3 +1,3 @@
 import Config
 
-config :todo_web, port: 4000
+config :todo, port: 4000
